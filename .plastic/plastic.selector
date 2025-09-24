@@ -1,4 +1,0 @@
-repository "AnaGrow/AnaGrow@1375857405997@cloud"
-  path "/"
-    br "/main"
-    co "/main"
