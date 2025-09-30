@@ -1,11 +1,13 @@
 ﻿using AnagrowLoader.Models;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 
 namespace AnagrowLoader
@@ -21,7 +23,7 @@ namespace AnagrowLoader
         public TMP_Text hint2;
         public TMP_Text hint3;
 
-        public static Boolean loaded;
+        public static bool loaded;
 
         private static int indexOffset = 0;
 
@@ -56,42 +58,56 @@ namespace AnagrowLoader
 
 
 
-        void LoadWordSets()
+
+
+        public void LoadWordSets()
         {
+            StartCoroutine(LoadWordSetsCoroutine());
+        }
+
+        private IEnumerator LoadWordSetsCoroutine()
+        {
+            string filePath = System.IO.Path.Combine(Application.streamingAssetsPath, "verified.json");
+
+            Debug.Log("Loading from: " + filePath);
+
+            UnityWebRequest request = UnityWebRequest.Get(filePath);
+            yield return request.SendWebRequest();
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError("Failed to load JSON: " + request.error);
+                yield break;
+            }
 
             try
             {
-
-                string filePath = Path.Combine(Application.streamingAssetsPath, "verified.json");
-
-                Debug.Log(filePath);
-
-
-                string jsonString = File.ReadAllText(filePath);
+                string jsonString = request.downloadHandler.text;
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 List<WordSetRaw> rawSets = JsonSerializer.Deserialize<List<WordSetRaw>>(jsonString, options);
-
 
                 WordSets = new List<WordSet>();
 
                 foreach (WordSetRaw wordSetRaw in rawSets)
                 {
-                    WordSet newset = new WordSet(wordSetRaw.Index, new List<Word> { wordSetRaw.FirstWord, wordSetRaw.SecondWord, wordSetRaw.ThirdWord });
+                    WordSet newset = new WordSet(
+                        wordSetRaw.Index,
+                        new List<Word> { wordSetRaw.FirstWord, wordSetRaw.SecondWord, wordSetRaw.ThirdWord }
+                    );
                     WordSets.Add(newset);
                 }
 
                 loaded = true;
-
+                Debug.Log("Word sets loaded successfully. Count: " + WordSets.Count);
             }
             catch (Exception ex)
             {
-                Debug.Log(ex.ToString());
+                Debug.LogError("JSON Parse Error: " + ex.ToString());
             }
-
-
-
         }
+        
+
 
 
         public int GetCurrentDateIndex()
