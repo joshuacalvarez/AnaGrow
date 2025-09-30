@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,17 +17,47 @@ namespace AnagrowLoader
 
         public Button button;
 
+        public TMP_Text hint1;
+        public TMP_Text hint2;
+        public TMP_Text hint3;
+
+        public static Boolean loaded;
+
+        private static int indexOffset = 0;
+
         void Start()
         {
             //Calls the TaskOnClick/TaskWithParameters/ButtonClicked method when you click the Button
-            button.onClick.AddListener(LoadWordSets);
+            button.onClick.AddListener(GetWordSet);
+            loaded = false;
+            
            
         }
 
-        
-        static void LoadWordSets()
+        void GetWordSet()
         {
+            if (!loaded)
+            {
+                LoadWordSets();
+            }
 
+            int index = GetCurrentDateIndex();
+
+            WordSet currentSet = WordSets.ElementAt(index + indexOffset);
+            Debug.Log(currentSet.ToString());
+
+            indexOffset++;
+
+            hint1.text = currentSet.Words.ElementAt(0).Hint;
+            hint2.text = currentSet.Words.ElementAt(1).Hint;
+            hint3.text = currentSet.Words.ElementAt(2).Hint;
+
+        }
+
+
+
+        void LoadWordSets()
+        {
 
             try
             {
@@ -50,20 +81,7 @@ namespace AnagrowLoader
                     WordSets.Add(newset);
                 }
 
-                // PRINT SETS (DEBUG):
-
-                //foreach (WordSet wordSet in wordSets)
-                //{
-                //    Console.Write(wordSet.ToString());
-
-                //    Console.WriteLine("Index: " + wordSet.Index);
-                //    Console.WriteLine("Hint 1: " + wordSet.Words.ElementAt(0).Hint);
-                //    Console.WriteLine("Word 1: " + wordSet.Words.ElementAt(0).Answer);
-                //    Console.WriteLine("Hint 2: " + wordSet.Words.ElementAt(1).Hint);
-                //    Console.WriteLine("Word 2: " + wordSet.Words.ElementAt(1).Answer);
-                //    Console.WriteLine("Hint 3: " + wordSet.Words.ElementAt(2).Hint);
-                //    Console.WriteLine("Word 3: " + wordSet.Words.ElementAt(2).Answer);
-                //}
+                loaded = true;
 
             }
             catch (Exception ex)
@@ -71,13 +89,12 @@ namespace AnagrowLoader
                 Debug.Log(ex.ToString());
             }
 
-            GetCurrentSet();
 
 
         }
 
 
-        public static void GetCurrentSet()
+        public int GetCurrentDateIndex()
         {
             DateTime beginDate = new DateTime(2025, 9, 21);
             DateTime currentDate = DateTime.Today;
@@ -90,7 +107,8 @@ namespace AnagrowLoader
             Debug.Log("Begin date: " + beginDate);
             Debug.Log("Current date index: " + dateIndex);
 
-            Debug.Log(WordSets.ElementAt(dateIndex).ToString());
+            return dateIndex;
+
 
 
         }
