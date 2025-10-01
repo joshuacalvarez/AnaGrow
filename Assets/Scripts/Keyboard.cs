@@ -1,4 +1,5 @@
-using TMPro;
+ï»¿using TMPro;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -14,21 +15,43 @@ public class Keyboard : MonoBehaviour
     [SerializeField] private bool uppercase = true;
 
     [Header("Events")]
-    public UnityEvent<string, string, string> onAllSubmitted; // (word4, word5, word6)
+    public UnityEvent<string, string, string> onAllSubmitted;
 
-    private int idx = 0; // which field we're typing into
+    [Header("Focus Styling")]
+    [SerializeField] private Color activeBg = new Color(1f, 1f, 1f, 1f);
+    [SerializeField] private Color inactiveBg = new Color(1f, 1f, 1f, 0.45f);
+    [SerializeField] private Color activeText = new Color(0f, 0f, 0f, 1f);
+    [SerializeField] private Color inactiveText = new Color(0f, 0f, 0f, 0.5f);
+    [SerializeField, Range(0f, 1f)] private float placeholderAlpha = 0.6f;
+    [SerializeField] private Color activeCaret = new Color(0f, 0f, 0f, 1f);
+    [SerializeField] private Color hiddenCaret = new Color(0f, 0f, 0f, 0f);
+
+
+    private int idx = 0;
 
     void Awake()
     {
-        // Make fields display-only but visually normal
-        foreach (var f in fields)
+        for (int i = 0; i < fields.Length; i++)
         {
+            var f = fields[i];
             if (!f) continue;
-            f.readOnly = true;           // block manual typing
-            f.interactable = true;       // keep normal tint (not grey)
+
+            f.readOnly = true;
+            f.interactable = true;
+            f.shouldHideMobileInput = true;
+            f.onFocusSelectAll = false;
+
+            var sel = f.selectionColor;
+            sel.a = 0f;
+            f.selectionColor = sel;
+
             f.text = string.Empty;
+
+            int capture = i;
+            f.onSelect.AddListener(_ => Focus(capture));
         }
-        Focus(idx);
+
+        Focus(0);
     }
 
     public void PressChar(string c)
@@ -41,12 +64,11 @@ public class Keyboard : MonoBehaviour
         if (!f) return;
 
         int max = maxLens[idx];
-        if (f.text.Length >= max) { TryAdvance(); return; }
+        if (f.text.Length >= max) { return; }
 
         f.text += c;
         f.ForceLabelUpdate();
 
-        if (f.text.Length >= max) TryAdvanceOrSubmit();
     }
 
     public void PressBackspace()
@@ -64,7 +86,6 @@ public class Keyboard : MonoBehaviour
 
     public void PressEnter()
     {
-        // Only submit when all fields are full
         for (int i = 0; i < fields.Length; i++)
             if (fields[i].text.Length != maxLens[i]) return;
 
@@ -83,32 +104,87 @@ public class Keyboard : MonoBehaviour
         Focus(idx);
     }
 
-    // --- helpers ---
-    private void TryAdvance()
+    //private void TryAdvance()
+    //{
+    //    if (idx < fields.Length - 1) { idx++; Focus(idx); }
+    //}
+
+    //private void TryAdvanceOrSubmit()
+    //{
+    //    if (idx < fields.Length - 1)
+    //    {
+    //        idx++;
+    //        Focus(idx);
+    //    }
+    //    else
+    //    {
+    //        PressEnter();
+    //    }
+    //}
+
+    private void CollapseSelectionToEnd(TMP_InputField f)
     {
-        if (idx < fields.Length - 1) { idx++; Focus(idx); }
+        int end = f.text.Length;
+        f.caretPosition = end;
+        f.stringPosition = end;
+
+        f.selectionStringAnchorPosition = end;
+        f.selectionStringFocusPosition = end;
+
+        f.ForceLabelUpdate();
+    }
+    private System.Collections.IEnumerator CollapseNextFrame(TMP_InputField f)
+    {
+        yield return null; // wait one frame
+        if (!f) yield break;
+        CollapseSelectionToEnd(f);
     }
 
-    private void TryAdvanceOrSubmit()
-    {
-        if (idx < fields.Length - 1)
-        {
-            idx++;
-            Focus(idx);
-        }
-        else
-        {
-            // last field filled — auto-submit or wait for Enter
-            PressEnter();
-        }
-    }
 
     private void Focus(int i)
     {
-        // Optional: visually indicate current field (e.g., by caret color or a highlight Image)
-        // If your field has an Image background, you can tint it here.
-        // Example: (assuming you added an Image next to the InputField)
-        // var img = fields[i].GetComponent<UnityEngine.UI.Image>();
-        // if (img) img.color = new Color32(255,255,255,255);
+        if (fields == null || fields.Length == 0) return;
+        idx = Mathf.Clamp(i, 0, fields.Length - 1);
+
+        for (int k = 0; k < fields.Length; k++)
+        {
+            var f = fields[k];
+            if (!f) continue;
+
+            bool isActive = (k == idx);
+
+            var bg = f.GetComponent<UnityEngine.UI.Image>();
+            if (bg) bg.color = isActive ? activeBg : inactiveBg;
+
+            if (f.textComponent)
+                f.textComponent.color = isActive ? activeText : inactiveText;
+
+            if (f.placeholder is TMP_Text ph)
+            {
+                var baseCol = isActive ? activeText : inactiveText;
+                ph.color = new Color(baseCol.r, baseCol.g, baseCol.b, placeholderAlpha);
+            }
+
+            f.caretColor = isActive ? activeCaret : hiddenCaret;
+
+            if (isActive)
+            {
+                f.ActivateInputField();
+
+                int end = f.text.Length;
+                f.caretPosition = end;
+                f.stringPosition = end;
+                f.selectionStringAnchorPosition = end;
+                f.selectionStringFocusPosition = end;
+                f.ForceLabelUpdate();
+
+                StartCoroutine(CollapseNextFrame(f));
+            }
+            else
+            {
+                f.ReleaseSelection();
+                f.DeactivateInputField();
+            }
+        }
     }
 }
