@@ -31,32 +31,24 @@ namespace Assets.Scripts.DAO
         private static int indexOffset = 0;
 
 
-        public SetDAO() { }
+        public SetDAO() 
+        {
+            LoadWordSets();
+        }
 
-        private IEnumerator LoadWordSetsCoroutine()
+        private void LoadWordSets()
         {
             string filePath = System.IO.Path.Combine(Application.streamingAssetsPath, "verified.json");
-
             Debug.Log("Loading from: " + filePath);
-
-            UnityWebRequest request = UnityWebRequest.Get(filePath);
-            yield return request.SendWebRequest();
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError("Failed to load JSON: " + request.error);
-                yield break;
-            }
 
             try
             {
-                string jsonString = request.downloadHandler.text;
+                string jsonString = System.IO.File.ReadAllText(filePath);
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 List<WordSetRaw> rawSets = JsonSerializer.Deserialize<List<WordSetRaw>>(jsonString, options);
 
                 WordSets = new List<WordSet>();
-
                 foreach (WordSetRaw wordSetRaw in rawSets)
                 {
                     WordSet newset = new WordSet(
@@ -81,7 +73,7 @@ namespace Assets.Scripts.DAO
         {
             if (!loaded)
             {
-                LoadWordSetsCoroutine();
+                LoadWordSets();
             }
 
 
@@ -107,8 +99,6 @@ namespace Assets.Scripts.DAO
             Debug.Log("Current date index: " + dateIndex);
 
             return dateIndex;
-
-
 
         }
     }

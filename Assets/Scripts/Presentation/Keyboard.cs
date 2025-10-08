@@ -1,10 +1,12 @@
 ﻿using AnagrowLoader.Models;
 using Assets.Scripts.Business;
 using System;
+using System.Linq;
 using TMPro;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.UI;
 
 public class Keyboard : MonoBehaviour
 {
@@ -19,6 +21,12 @@ public class Keyboard : MonoBehaviour
 
     [Header("Events")]
     public UnityEvent<string, string, string> onAllSubmitted;
+
+    public Button button;
+
+    public TMP_Text hint1;
+    public TMP_Text hint2;
+    public TMP_Text hint3;
 
     [Header("Focus Styling")]
     [SerializeField] private Color activeBg = new Color(1f, 1f, 1f, 1f);
@@ -56,6 +64,13 @@ public class Keyboard : MonoBehaviour
         }
 
         Focus(0);
+    }
+
+    private void UpdateHints(WordSet currentSet)
+    {
+        hint1.text = currentSet.Set.ElementAt(0).Hint;
+        hint2.text = currentSet.Set.ElementAt(1).Hint;
+        hint3.text = currentSet.Set.ElementAt(2).Hint;
     }
 
     public void PressChar(string c)
@@ -186,8 +201,11 @@ public class Keyboard : MonoBehaviour
         }
     }
 
-    private void pressTempNextSetButton()
+    public void pressTempNextSetButton()
     {
         setHandler.getNextSet();
+        WordSet newSet = setHandler.getCurrentWordSet();
+        UpdateHints(newSet);
+
     }
 }

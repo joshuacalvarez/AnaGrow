@@ -53,8 +53,5 @@ namespace Assets.Scripts.Business
             currentSet = getWordSetById(currentDateIndex);
         }
 
-
-
-
     }
 }
