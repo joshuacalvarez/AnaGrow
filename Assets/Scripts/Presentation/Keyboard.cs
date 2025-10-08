@@ -1,6 +1,7 @@
 ﻿using AnagrowLoader.Models;
 using Assets.Scripts.Business;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using Unity.Collections;
@@ -36,13 +37,51 @@ public class Keyboard : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float placeholderAlpha = 0.6f;
     [SerializeField] private Color activeCaret = new Color(0f, 0f, 0f, 1f);
     [SerializeField] private Color hiddenCaret = new Color(0f, 0f, 0f, 0f);
+    [SerializeField] private Color solvedBg = new Color(0.88f, 0.96f, 1f, 1f);
+
+
+    [SerializeField] private Color wrongText = new Color(0.90f, 0.10f, 0.10f, 1f);
+    [SerializeField] private float shakeDuration = 0.4f;
+    [SerializeField] private float shakeMagnitude = 8f;
+
+    [SerializeField] private CanvasGroup lengthPopup;
+    [SerializeField] private TMP_Text lengthPopupText;
+    [SerializeField] private float popupDuration = .1f;
+    [SerializeField] private float popupFade = 0.1f;
+
 
     private SetHandler setHandler = new SetHandler();
     private int idx = 0;
     private int focusField = -1;
+    private bool[] solved;
+
+    private Dictionary<char, Button> keyButtons = new Dictionary<char, Button>();
 
     void Awake()
     {
+
+        if (lengthPopup)
+        {
+            lengthPopup.alpha = 0f;
+            lengthPopup.gameObject.SetActive(false);
+        }
+
+        foreach (var button in GetComponentsInChildren<Button>(true))
+        {
+            var textComp = button.GetComponentInChildren<TMP_Text>();
+            if (!textComp) continue;
+
+            string label = textComp.text.Trim().ToUpper();
+
+            // Skip non-letter buttons (like Enter/Backspace)
+            if (label.Length != 1 || !char.IsLetter(label[0])) continue;
+
+            char letter = label[0];
+            if (!keyButtons.ContainsKey(letter))
+                keyButtons.Add(letter, button);
+        }
+
+        solved = new bool[fields.Length];
         for (int i = 0; i < fields.Length; i++)
         {
             var f = fields[i];
@@ -106,19 +145,52 @@ public class Keyboard : MonoBehaviour
     public void PressEnter()
     {
         var field = fields[focusField];
-        //for (int i = 0; i < fields.Length; i++)
-        //    if (fields[i].text.Length != maxLens[i]) return;
 
-        ////onAllSubmitted?.Invoke(fields[0].text, fields[1].text, fields[2].text);
-
-        if(setHandler.checkWord(fields[focusField].text, focusField))
+        int requiredLength = maxLens[focusField];
+        if (field.text.Length != requiredLength)
         {
-            field.textComponent.color = Color.blue;
-            field.readOnly = true;
-            Focus(++focusField);
+            StartCoroutine(ShowLengthPopup($"Enter {requiredLength} letters"));
+            StartCoroutine(WrongGuessFeedback(field));
+            return;
         }
 
+        if (setHandler.checkWord(fields[focusField].text, focusField))
+        {
+            string g = field.text.ToUpperInvariant();
+            foreach (char letter in g)
+            {
+                SetKeyColor(letter);
+            }
 
+
+            solved[focusField] = true;
+            field.textComponent.color = Color.blue;
+            field.readOnly = true;
+            field.DeactivateInputField();
+
+
+
+            Focus(++focusField);
+        }
+        else
+        {
+            StartCoroutine(WrongGuessFeedback(field));
+        }
+    }
+
+    private void SetKeyColor(char letter)
+    {
+        letter = Char.ToUpper(letter);
+        if (keyButtons.TryGetValue(letter, out var button))
+        {
+            var image = button.GetComponent<Image>();
+            if (image)
+                image.color = new Color(0f / 255f, 138f / 255f, 213f / 255f); ;
+
+            var text = button.GetComponentInChildren<TMP_Text>();
+            if (text)
+                text.color = Color.white;
+        }
     }
 
     public void ClearAll()
@@ -162,6 +234,16 @@ public class Keyboard : MonoBehaviour
         {
             var f = fields[k];
             if (!f) continue;
+
+            if (solved[k])
+            {
+                f.textComponent.color = new Color(6f / 255f, 133f / 255f, 196f / 255f);
+                f.readOnly = true;
+                f.interactable = false;
+                f.ReleaseSelection();
+
+                continue;
+            }
 
             bool isActive = (k == idx);
 
@@ -208,4 +290,75 @@ public class Keyboard : MonoBehaviour
         UpdateHints(newSet);
 
     }
+
+    private System.Collections.IEnumerator WrongGuessFeedback(TMP_InputField f)
+    {
+        if (!f) yield break;
+
+        // cache
+        var rt = f.GetComponent<RectTransform>();
+        if (!rt) yield break;
+
+        Color originalText = f.textComponent.color;
+        Vector2 originalPos = rt.anchoredPosition;
+
+        // flash red
+        f.textComponent.color = wrongText;
+        f.caretColor = wrongText;
+
+        // optional: temporarily block typing during shake
+        bool wasInteractable = f.interactable;
+        f.interactable = false;
+
+        float t = 0f;
+        while (t < shakeDuration)
+        {
+            // random shake
+            float offsetX = UnityEngine.Random.Range(-1f, 1f) * shakeMagnitude;
+            float offsetY = UnityEngine.Random.Range(-1f, 1f) * (shakeMagnitude * 0.6f);
+            rt.anchoredPosition = originalPos + new Vector2(offsetX, offsetY);
+
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // restore
+        rt.anchoredPosition = originalPos;
+        f.textComponent.color = originalText;
+        f.caretColor = activeCaret;
+        f.interactable = wasInteractable;
+
+        f.ActivateInputField();
+        CollapseSelectionToEnd(f);
+    }
+
+    private System.Collections.IEnumerator ShowLengthPopup(string msg)
+    {
+        if (!lengthPopup) yield break;
+
+        if (lengthPopupText) lengthPopupText.text = msg;
+        lengthPopup.gameObject.SetActive(true);
+
+        float t = 0f;
+        while (t < popupFade)
+        {
+            t += Time.unscaledDeltaTime;
+            lengthPopup.alpha = Mathf.Lerp(0f, 1f, t / popupFade);
+            yield return null;
+        }
+        lengthPopup.alpha = 1f;
+
+        yield return new WaitForSecondsRealtime(popupDuration);
+
+        t = 0f;
+        while (t < popupFade)
+        {
+            t += Time.unscaledDeltaTime;
+            lengthPopup.alpha = Mathf.Lerp(1f, 0f, t / popupFade);
+            yield return null;
+        }
+        lengthPopup.alpha = 0f;
+        lengthPopup.gameObject.SetActive(false);
+    }
+
 }
