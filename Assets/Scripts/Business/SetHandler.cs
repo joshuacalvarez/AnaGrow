@@ -47,6 +47,12 @@ namespace Assets.Scripts.Business
             return setDao.GetWordSetByIndex(idx);
         }
 
+        public void getNextSet()
+        {
+            int currentDateIndex = setDao.GetCurrentDateIndex();
+            currentSet = getWordSetById(currentDateIndex);
+        }
+
 
 
 

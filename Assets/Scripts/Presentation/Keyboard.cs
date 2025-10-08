@@ -186,5 +186,8 @@ public class Keyboard : MonoBehaviour
         }
     }
 
-    
+    private void pressTempNextSetButton()
+    {
+        setHandler.getNextSet();
+    }
 }

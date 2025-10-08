@@ -91,5 +91,25 @@ namespace Assets.Scripts.DAO
             return wordSet;
 
         }
+
+
+        public int GetCurrentDateIndex()
+        {
+            DateTime beginDate = new DateTime(2025, 9, 21);
+            DateTime currentDate = DateTime.Today;
+
+            TimeSpan difference = currentDate - beginDate;
+
+            int dateIndex = (int)difference.TotalDays;
+
+            Debug.Log("Today's date: " + currentDate);
+            Debug.Log("Begin date: " + beginDate);
+            Debug.Log("Current date index: " + dateIndex);
+
+            return dateIndex;
+
+
+
+        }
     }
 }
