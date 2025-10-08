@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2179167915321980046}
   - component: {fileID: 4611543652709873894}
   - component: {fileID: 1448929139923559145}
-  - component: {fileID: 402085939978554068}
+  - component: {fileID: -1005181573447347934}
   m_Layer: 5
   m_Name: Key
   m_TagString: Untagged
@@ -137,7 +137,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Nobi.UiRoundedCorners::Nobi.UiRoundedCorners.ImageWithRoundedCorners
   radius: 71.04
   image: {fileID: 2179167915321980046}
---- !u!114 &402085939978554068
+--- !u!114 &-1005181573447347934
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -146,7 +146,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 6641262380451277910}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a9b02a59bde23c458422f7ddabf3579, type: 3}
+  m_Script: {fileID: 11500000, guid: e483a71944f60fc45ad39fe0f081dbef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Key
   keyText: {fileID: 0}

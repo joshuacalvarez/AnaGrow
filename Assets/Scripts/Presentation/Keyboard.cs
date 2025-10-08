@@ -1,4 +1,7 @@
-﻿using TMPro;
+﻿using AnagrowLoader.Models;
+using Assets.Scripts.Business;
+using System;
+using TMPro;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Events;
@@ -26,8 +29,9 @@ public class Keyboard : MonoBehaviour
     [SerializeField] private Color activeCaret = new Color(0f, 0f, 0f, 1f);
     [SerializeField] private Color hiddenCaret = new Color(0f, 0f, 0f, 0f);
 
-
+    private SetHandler setHandler = new SetHandler();
     private int idx = 0;
+    private int focusField = -1;
 
     void Awake()
     {
@@ -86,10 +90,20 @@ public class Keyboard : MonoBehaviour
 
     public void PressEnter()
     {
-        for (int i = 0; i < fields.Length; i++)
-            if (fields[i].text.Length != maxLens[i]) return;
+        var field = fields[focusField];
+        //for (int i = 0; i < fields.Length; i++)
+        //    if (fields[i].text.Length != maxLens[i]) return;
 
-        onAllSubmitted?.Invoke(fields[0].text, fields[1].text, fields[2].text);
+        ////onAllSubmitted?.Invoke(fields[0].text, fields[1].text, fields[2].text);
+
+        if(setHandler.checkWord(fields[focusField].text, focusField))
+        {
+            field.textComponent.color = Color.blue;
+            field.readOnly = true;
+            Focus(++focusField);
+        }
+
+
     }
 
     public void ClearAll()
@@ -104,23 +118,6 @@ public class Keyboard : MonoBehaviour
         Focus(idx);
     }
 
-    //private void TryAdvance()
-    //{
-    //    if (idx < fields.Length - 1) { idx++; Focus(idx); }
-    //}
-
-    //private void TryAdvanceOrSubmit()
-    //{
-    //    if (idx < fields.Length - 1)
-    //    {
-    //        idx++;
-    //        Focus(idx);
-    //    }
-    //    else
-    //    {
-    //        PressEnter();
-    //    }
-    //}
 
     private void CollapseSelectionToEnd(TMP_InputField f)
     {
@@ -179,6 +176,7 @@ public class Keyboard : MonoBehaviour
                 f.ForceLabelUpdate();
 
                 StartCoroutine(CollapseNextFrame(f));
+                focusField = k;
             }
             else
             {
@@ -187,4 +185,6 @@ public class Keyboard : MonoBehaviour
             }
         }
     }
+
+    
 }

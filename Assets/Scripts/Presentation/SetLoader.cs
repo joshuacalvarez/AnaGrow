@@ -16,6 +16,7 @@ namespace AnagrowLoader
     {
 
         public static List<WordSet> WordSets;
+        public static WordSet currentSet;
 
         public Button button;
 
@@ -26,6 +27,7 @@ namespace AnagrowLoader
         public static bool loaded;
 
         private static int indexOffset = 0;
+
 
         void Start()
         {
@@ -45,14 +47,14 @@ namespace AnagrowLoader
 
             int index = GetCurrentDateIndex();
 
-            WordSet currentSet = WordSets.ElementAt(index + indexOffset);
+            currentSet = WordSets.ElementAt(index + indexOffset);
             Debug.Log(currentSet.ToString());
 
             indexOffset++;
 
-            hint1.text = currentSet.Words.ElementAt(0).Hint;
-            hint2.text = currentSet.Words.ElementAt(1).Hint;
-            hint3.text = currentSet.Words.ElementAt(2).Hint;
+            hint1.text = currentSet.Set.ElementAt(0).Hint;
+            hint2.text = currentSet.Set.ElementAt(1).Hint;
+            hint3.text = currentSet.Set.ElementAt(2).Hint;
 
         }
 
