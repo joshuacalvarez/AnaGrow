@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using Unity.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using System.Collections;
 
 public class Keyboard : MonoBehaviour
 {
@@ -39,15 +41,14 @@ public class Keyboard : MonoBehaviour
     [SerializeField] private Color hiddenCaret = new Color(0f, 0f, 0f, 0f);
     [SerializeField] private Color solvedBg = new Color(0.88f, 0.96f, 1f, 1f);
 
-
     [SerializeField] private Color wrongText = new Color(0.90f, 0.10f, 0.10f, 1f);
     [SerializeField] private float shakeDuration = 0.4f;
     [SerializeField] private float shakeMagnitude = 8f;
 
     [SerializeField] private CanvasGroup lengthPopup;
     [SerializeField] private TMP_Text lengthPopupText;
-    [SerializeField] private float popupDuration = .1f;
-    [SerializeField] private float popupFade = 0.1f;
+    [SerializeField] private float fadeDuration = 0.3f;
+    [SerializeField] private float popupStaySeconds = 1f;
 
 
     private SetHandler setHandler = new SetHandler();
@@ -56,6 +57,8 @@ public class Keyboard : MonoBehaviour
     private bool[] solved;
 
     private Dictionary<char, Button> keyButtons = new Dictionary<char, Button>();
+    [SerializeField] private Button enterKey;
+    [SerializeField] private Button backKey;
 
     void Awake()
     {
@@ -146,6 +149,7 @@ public class Keyboard : MonoBehaviour
     {
         var field = fields[focusField];
 
+        //Incorrect Word Length
         int requiredLength = maxLens[focusField];
         if (field.text.Length != requiredLength)
         {
@@ -154,8 +158,10 @@ public class Keyboard : MonoBehaviour
             return;
         }
 
+        //Word is Right
         if (setHandler.checkWord(fields[focusField].text, focusField))
         {
+            //Make buttons blue
             string g = field.text.ToUpperInvariant();
             foreach (char letter in g)
             {
@@ -163,19 +169,57 @@ public class Keyboard : MonoBehaviour
             }
 
 
+            //Make the textfield solved
             solved[focusField] = true;
             field.textComponent.color = Color.blue;
             field.readOnly = true;
             field.DeactivateInputField();
 
 
-
-            Focus(++focusField);
+            if (CheckWinCondition())
+            {
+                DisableKeyboard();
+                Focus(++focusField);
+                //TriggerWin();
+            }
+            else
+            {
+                if(focusField == 2)
+                {
+                    focusField = (solved[0] == true) ? 1 : 0;
+                    Focus(focusField);
+                }
+                else
+                {
+                    Focus(++focusField);
+                }
+            }
         }
         else
         {
             StartCoroutine(WrongGuessFeedback(field));
         }
+    }
+
+    private void DisableKeyboard()
+    {
+        foreach(KeyValuePair<char, Button> key in keyButtons){
+            key.Value.enabled = false;
+        }
+        enterKey.enabled = false;
+        backKey.enabled = false;
+    }
+
+    private bool CheckWinCondition()
+    {
+        foreach(bool isSolved in solved)
+        {
+            if(isSolved == false)
+            {
+                return false;
+            }
+        }
+            return true;
     }
 
     private void SetKeyColor(char letter)
@@ -219,7 +263,7 @@ public class Keyboard : MonoBehaviour
     }
     private System.Collections.IEnumerator CollapseNextFrame(TMP_InputField f)
     {
-        yield return null; // wait one frame
+        yield return null;
         if (!f) yield break;
         CollapseSelectionToEnd(f);
     }
@@ -332,33 +376,68 @@ public class Keyboard : MonoBehaviour
         CollapseSelectionToEnd(f);
     }
 
-    private System.Collections.IEnumerator ShowLengthPopup(string msg)
+    private IEnumerator FadeOut(CanvasGroup cg)
+    {
+        if (!cg) yield break;
+        cg.interactable = false;
+        cg.blocksRaycasts = false;
+
+        float t = 0f;
+        float start = cg.alpha, end = 0f;
+        while (t < fadeDuration)
+        {
+            cg.alpha = Mathf.Lerp(start, end, t / fadeDuration);
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        cg.alpha = 0f;
+        cg.gameObject.SetActive(false);
+    }
+
+    private IEnumerator FadeIn(CanvasGroup cg)
+    {
+        if (!cg) yield break;
+        cg.gameObject.SetActive(true);
+        cg.blocksRaycasts = true;
+        cg.interactable = true;
+
+        float t = 0f;
+        float start = cg.alpha, end = 1f;
+        while (t < fadeDuration)
+        {
+            cg.alpha = Mathf.Lerp(start, end, t / fadeDuration);
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        cg.alpha = 1f;
+    }
+
+    private IEnumerator ShowLengthPopup(string msg)
     {
         if (!lengthPopup) yield break;
 
         if (lengthPopupText) lengthPopupText.text = msg;
-        lengthPopup.gameObject.SetActive(true);
 
-        float t = 0f;
-        while (t < popupFade)
-        {
-            t += Time.unscaledDeltaTime;
-            lengthPopup.alpha = Mathf.Lerp(0f, 1f, t / popupFade);
-            yield return null;
-        }
-        lengthPopup.alpha = 1f;
-
-        yield return new WaitForSecondsRealtime(popupDuration);
-
-        t = 0f;
-        while (t < popupFade)
-        {
-            t += Time.unscaledDeltaTime;
-            lengthPopup.alpha = Mathf.Lerp(1f, 0f, t / popupFade);
-            yield return null;
-        }
-        lengthPopup.alpha = 0f;
-        lengthPopup.gameObject.SetActive(false);
+        yield return StartCoroutine(FadeIn(lengthPopup));
+        yield return new WaitForSecondsRealtime(popupStaySeconds);
+        yield return StartCoroutine(FadeOut(lengthPopup));
     }
+
+
+
+    private void HideButton()
+    {
+        lengthPopup.alpha = 0f;
+        lengthPopup.interactable = false;
+        lengthPopup.blocksRaycasts = false;
+    }
+
+    private void ShowButton()
+    {
+        lengthPopup.alpha = 1f;
+        lengthPopup.interactable = true;
+        lengthPopup.blocksRaycasts = true;
+    }
+
 
 }
