@@ -14,11 +14,12 @@ namespace Assets.Scripts.Business
         private SetDAO setDao = new SetDAO();
         WordSet currentSet;
         public Button button;
+        int currentDateIndex = -1;
 
 
         public SetHandler()
         {
-
+            currentDateIndex = setDao.GetCurrentDateIndex() - 1;
         }
 
         public SetHandler(WordSet wordSet)
@@ -49,7 +50,7 @@ namespace Assets.Scripts.Business
 
         public void getNextSet()
         {
-            int currentDateIndex = setDao.GetCurrentDateIndex();
+            currentDateIndex++;
             currentSet = getWordSetById(currentDateIndex);
         }
 
