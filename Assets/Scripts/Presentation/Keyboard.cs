@@ -60,6 +60,11 @@ public class Keyboard : MonoBehaviour
     [SerializeField] private Button enterKey;
     [SerializeField] private Button backKey;
 
+    private void Start()
+    {
+        LoadWords();
+    }
+
     void Awake()
     {
 
@@ -180,8 +185,9 @@ public class Keyboard : MonoBehaviour
             {
                 DisableKeyboard();
                 Focus(++focusField);
-                //TriggerWin();
+                StartCoroutine(HandleSuccessFlow());
             }
+
             else
             {
                 if(focusField == 2)
@@ -199,6 +205,18 @@ public class Keyboard : MonoBehaviour
         {
             StartCoroutine(WrongGuessFeedback(field));
         }
+    }
+
+    private IEnumerator HandleSuccessFlow()
+    {
+        var anim = FindAnyObjectByType<SuccessAnimator>();
+        if (anim) anim.Play();
+
+        //wait 3 seconds after animation
+        yield return new WaitForSecondsRealtime(3f);
+
+        SceneLoader sceneLoader = new SceneLoader();
+        sceneLoader.LoadSceneByName("MainMenu");
     }
 
     private void DisableKeyboard()
@@ -327,7 +345,7 @@ public class Keyboard : MonoBehaviour
         }
     }
 
-    public void pressTempNextSetButton()
+    public void LoadWords()
     {
         setHandler.getNextSet();
         WordSet newSet = setHandler.getCurrentWordSet();
